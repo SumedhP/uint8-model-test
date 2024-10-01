@@ -65,7 +65,7 @@ color_to_word = ["Blue", "Red", "Neutral", "Purple"]
 tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
 
 model = dnn.readNetFromONNX('model-opt.onnx')
-model.setPreferableBackend(dnn.DNN_BACKEND_INFERENCE_ENGINE)
+model.setPreferableBackend(dnn.DNN_BACKEND_DEFAULT)
 model.setPreferableTarget(dnn.DNN_TARGET_CPU)
 
 from time import time
@@ -95,40 +95,26 @@ def makeBoxesFromOutput(output) -> List[Match]:
   return boxes
 
 def getBoxesForImg(img: MatLike) -> List[Match]:
-  start = time()
-  
   # create a black image and paste the resized image on it
   input_img = np.full((640, 640, 3), 127, dtype=np.uint8)
   input_img[0:img.shape[0], 0:img.shape[1]] = img
   input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
   
-  print("Time taken to create input image np array : ", time() - start)
-  start = time()
-  
   # Make input to system
   x = cv2.dnn.blobFromImage(input_img) / 255.0
-  print("Time taken to create x: ", time() - start)
-  start = time()
   
   model.setInput(x)
-  print("Time taken to set input: ", time() - start)
   output = np.array(model.forward())
-  print("Time taken to get output: ", time() - start)
-  start = time()
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
   boxes = makeBoxesFromOutput(output)
-  print("Time taken to make boxes faster: ", time() - start)
   
   return boxes
 
 def labelImage(filename: str):
   # open up new image
   # Since it is 960x540, split it into two 540x540 images
-  start = time()
   img = cv2.imread(filename)
-  end = time()
-  print("Time taken to read image: ", end - start)
   
   offset = 960 - 540
   
@@ -137,8 +123,6 @@ def labelImage(filename: str):
   
   img2 = img[0:540, offset:offset+540]
   img2_boxes = getBoxesForImg(img2)
-  end = time()
-  print("Time taken to get boxes: ", end - start)
   
   # Offset the x values of the second image
   for box in img2_boxes:

@@ -11,17 +11,9 @@ files = os.listdir(FILE_DIRECTORY)
 
 print("Found, ", len(files), " files")
 
-from time import time
-
 for file in tqdm(files):
-  start = time()
   labelled_image = labelImage(os.path.join(FILE_DIRECTORY, file))
-  end = time()
-  print("Time taken: ", end - start)
-  exit()
-  
-  
-  # cv2.imwrite(os.path.join(OUTPUT_DIRECTORY, file), labelled_image)
+  cv2.imwrite(os.path.join(OUTPUT_DIRECTORY, file), labelled_image)
   
 # Now compile the images into a mp4 video 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # For MP4 format
