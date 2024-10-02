@@ -2,7 +2,6 @@ from model import labelImage
 import os
 import cv2
 from tqdm import tqdm
-import signal
 
 # Open all the files in the directory
 FILE_DIRECTORY = 'images'
