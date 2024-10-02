@@ -7,8 +7,6 @@ from tqdm import tqdm
 FILE_DIRECTORY = 'images'
 OUTPUT_DIRECTORY = 'better labelled'
 
-VIDEO_DIRECTORY = 'better labbelled videos'
-
 # The top directory is just filled with subdirectory
 # For every subdirectory, we will label the images in it and create a video for it
 subdirectories = os.listdir(FILE_DIRECTORY)
