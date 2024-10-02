@@ -17,6 +17,10 @@ def combine_videos():
     video_writer = None
 
     for mp4_file in mp4_files:
+        # Skip the combined video file
+        if mp4_file == "combined_video.mp4":
+            continue
+      
         # Open the video file
         cap = cv2.VideoCapture(mp4_file)
         
