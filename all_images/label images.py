@@ -42,3 +42,8 @@ for file in tqdm(files, mininterval=0.0000000000000000000001):
   if(count % 500 == 0):
     makeVideo()
     print("Made a video as we have labelled 500 images")
+
+
+
+
+
