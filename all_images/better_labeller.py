@@ -15,7 +15,7 @@ for subdirectory in subdirectories:
   subdirectoryFilePath = os.path.join(FILE_DIRECTORY, subdirectory)
   
   files = os.listdir(subdirectoryFilePath)
-  print("Found, ", len(files), " files")
+  print("Found, ", len(files), " files in ", subdirectory)
   
   newOutputDirectory = os.path.join(OUTPUT_DIRECTORY, subdirectory)
   
