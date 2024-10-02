@@ -1,5 +1,6 @@
 import os
 import cv2
+from tqdm import tqdm
 
 def combine_videos():
     # Get the current directory
@@ -16,7 +17,7 @@ def combine_videos():
     # Initialize variables
     video_writer = None
 
-    for mp4_file in mp4_files:
+    for mp4_file in tqdm(mp4_files):
         # Skip the combined video file
         if mp4_file == "combined_video.mp4":
             continue
