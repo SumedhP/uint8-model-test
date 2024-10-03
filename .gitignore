@@ -9,3 +9,5 @@
 *.webp
 *.mp4
 *.zip
+*.7z
+*.pyc
