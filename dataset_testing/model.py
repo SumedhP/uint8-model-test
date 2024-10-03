@@ -24,21 +24,21 @@ def sigmoid(x):
 
 def is_overlap(rect1: Match, rect2: Match) -> bool:
     # Extract the corners of both rectangles
-    r1_bottom_left = rect1.points[0]
-    r1_top_right = rect1.points[2]
+    r1_min_x = min(rect1.points[0].x, rect1.points[1].x, rect1.points[2].x, rect1.points[3].x)
+    r1_max_x = max(rect1.points[0].x, rect1.points[1].x, rect1.points[2].x, rect1.points[3].x)
+    r1_min_y = min(rect1.points[0].y, rect1.points[1].y, rect1.points[2].y, rect1.points[3].y)
+    r1_max_y = max(rect1.points[0].y, rect1.points[1].y, rect1.points[2].y, rect1.points[3].y)
     
-    r2_bottom_left = rect2.points[0]
-    r2_top_right = rect2.points[2]
+    r2_min_x = min(rect2.points[0].x, rect2.points[1].x, rect2.points[2].x, rect2.points[3].x)
+    r2_max_x = max(rect2.points[0].x, rect2.points[1].x, rect2.points[2].x, rect2.points[3].x)
+    r2_min_y = min(rect2.points[0].y, rect2.points[1].y, rect2.points[2].y, rect2.points[3].y)
+    r2_max_y = max(rect2.points[0].y, rect2.points[1].y, rect2.points[2].y, rect2.points[3].y)
     
-    # Check for non-overlapping conditions
-    if (r1_bottom_left.x > r2_top_right.x or r2_bottom_left.x > r1_top_right.x):
-        return False  # One rectangle is to the left of the other
+    # Check if the rectangles overlap
+    x_overlap = (r1_max_x >= r2_min_x) and (r2_max_x >= r1_min_x)
+    y_overlap = (r1_max_y >= r2_min_y) and (r2_max_y >= r1_min_y)
     
-    if (r1_bottom_left.y > r2_top_right.y or r2_bottom_left.y > r1_top_right.y):
-        return False  # One rectangle is above the other
-    
-    # If none of the non-overlapping conditions are met, the rectangles overlap
-    return True
+    return x_overlap and y_overlap
   
 def merge_rectangles(rect1: Match, rect2: Match) -> Match:
     # Extract all x and y coordinates from both rectangles
@@ -109,15 +109,6 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
   boxes = makeBoxesFromOutput(output)
   
-  # Now do it again but flip the image vertically
-  input_img = cv2.flip(input_img, 0)
-  x = cv2.dnn.blobFromImage(input_img) / 255.0
-  model.setInput(x)
-  output = np.array(model.forward())
-  
-  # Now evaluate the output, only making a Match object if the confidence is above 0.5
-  flipped_boxes = makeBoxesFromOutput(output)
-  
   return boxes
 
 def getMergedBoxesForImg(img: MatLike) -> List[Match]:
@@ -162,8 +153,24 @@ def labelImage(filename: str):
   
   # Now rotate the image 180 degrees clockwise
   img = cv2.rotate(img, cv2.ROTATE_180)
+  rotated_merged_boxes = getMergedBoxesForImg(img)
   
+  # Adjust the points in all of these rotated boxes to match the original image
+  for box in rotated_merged_boxes:
+    for point in box.points:
+      point.x = 960 - point.x
+      point.y = 540 - point.y
   
+  # Now check to see if any are tagged as sentry in the rotated, but not in the original
+  for box in rotated_merged_boxes:
+    if box.tag != "Sentry":
+      continue
+    
+    for other_box in merged_boxes:
+      if is_overlap(box, other_box):
+        other_box.tag = "Sentry"
+  
+  img = cv2.rotate(img, cv2.ROTATE_180)
   
   # Now add the labels to the image
   for i in range(len(merged_boxes)):
