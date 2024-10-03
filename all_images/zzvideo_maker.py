@@ -10,7 +10,7 @@ subdirectories = os.listdir(FILE_DIRECTORY)
 VIDEO_WIDTH = 960
 VIDEO_HEIGHT = 540
 
-for subdirectory in tqdm(subdirectories):
+for subdirectory in tqdm(subdirectories, mininterval=0.0000000000000000000001):
   output_video_name = str(f'{subdirectory}.mp4')
   if os.path.exists(output_video_name):
     print("Video already exists for ", subdirectory)
@@ -19,7 +19,7 @@ for subdirectory in tqdm(subdirectories):
   subdirectoryFilePath = os.path.join(FILE_DIRECTORY, subdirectory)
   
   files = os.listdir(subdirectoryFilePath)
-  print("Found, ", len(files), " files")
+  print("Found, ", len(files), " files for ", subdirectory)
   
   images = []
   
