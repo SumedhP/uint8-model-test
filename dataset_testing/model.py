@@ -109,13 +109,18 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
   boxes = makeBoxesFromOutput(output)
   
+  # Now do it again but flip the image vertically
+  input_img = cv2.flip(input_img, 0)
+  x = cv2.dnn.blobFromImage(input_img) / 255.0
+  model.setInput(x)
+  output = np.array(model.forward())
+  
+  # Now evaluate the output, only making a Match object if the confidence is above 0.5
+  flipped_boxes = makeBoxesFromOutput(output)
+  
   return boxes
 
-def labelImage(filename: str):
-  # open up new image
-  # Since it is 960x540, split it into two 540x540 images
-  img = cv2.imread(filename)
-  
+def getMergedBoxesForImg(img: MatLike) -> List[Match]:
   offset = 960 - 540
   
   img1 = img[0:540, 0:540]
@@ -145,6 +150,20 @@ def labelImage(filename: str):
     # It doesn't overlap with any of the merged boxes, so add it to the list
     if(not overlaps_with):
       merged_boxes.append(img1_boxes[i])
+      
+  return merged_boxes
+
+def labelImage(filename: str):
+  # open up new image
+  # Since it is 960x540, split it into two 540x540 images
+  img = cv2.imread(filename)
+  
+  merged_boxes = getMergedBoxesForImg(img)
+  
+  # Now rotate the image 180 degrees clockwise
+  img = cv2.rotate(img, cv2.ROTATE_180)
+  
+  
   
   # Now add the labels to the image
   for i in range(len(merged_boxes)):

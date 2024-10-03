@@ -4,8 +4,8 @@ import cv2
 from tqdm import tqdm
 
 # Open all the files in the directory
-FILE_DIRECTORY = 'raw images'
-OUTPUT_DIRECTORY = 'labelled images'
+FILE_DIRECTORY = 'temporar'
+OUTPUT_DIRECTORY = 'temporar_output'
 
 files = os.listdir(FILE_DIRECTORY)
 
