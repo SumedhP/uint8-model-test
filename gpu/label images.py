@@ -7,6 +7,10 @@ from tqdm import tqdm
 FILE_DIRECTORY = 'half_dataset'
 OUTPUT_DIRECTORY = 'half_dataset_output'
 
+# Make output dir if it doesn't exist
+if not os.path.exists(OUTPUT_DIRECTORY):
+  os.makedirs(OUTPUT_DIRECTORY)
+
 files = os.listdir(FILE_DIRECTORY)
 
 print("Found, ", len(files), " files")
