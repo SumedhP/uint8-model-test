@@ -3,6 +3,8 @@ import cv2.dnn as dnn
 import numpy as np
 from dataclasses import dataclass
 from cv2.typing import MatLike
+from time import perf_counter_ns as time_ns
+
 
 @dataclass
 class Point:
@@ -95,17 +97,34 @@ def makeBoxesFromOutput(output) -> List[Match]:
   return boxes
 
 times = []
+
 def getBoxesForImg(img: MatLike) -> List[Match]:
   # create a black image and paste the resized image on it
   input_img = np.full((640, 640, 3), 127, dtype=np.uint8)
   input_img[0:img.shape[0], 0:img.shape[1]] = img
-  input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
   
-  # Make input to system
-  x = cv2.dnn.blobFromImage(input_img) / 255.0
-  onnx_input = {"images": x}
+  start = time_ns()
   
-  from time import time_ns
+  # Manually convert BGR to RGB by swapping the color channels
+  input_img = input_img[..., ::-1]
+  
+  end = time_ns()
+  print("Color conversion took: ", (end - start) / 1e6)
+
+  
+  # The following bit is done to replace the cv2.dnn.blobFromImage function
+  
+  # Normalize the image to [0, 1] range by dividing by 255
+  input_img = input_img.astype(np.float32) / 255.0
+
+  # Transpose to the format (channels, height, width) expected by ONNX models
+  input_img = np.transpose(input_img, (2, 0, 1))
+
+  # Add batch dimension, making the shape (1, channels, height, width)
+  input_img = np.expand_dims(input_img, axis=0)
+  
+  onnx_input = {"images": input_img}
+  
   start = time_ns()
   output = model.run(None, onnx_input)
   end = time_ns()
@@ -151,12 +170,42 @@ def getMergedBoxesForImg(img: MatLike) -> List[Match]:
       
   return merged_boxes
 
+def getBoxesForScaledImg(img: MatLike) -> List[Match]:
+  # Resize from a 960x540 image to a 640x640 image
+  resized_img = cv2.resize(img, (640, 640))
+  boxes = getBoxesForImg(resized_img)
+  
+  x_scalar = 960 / 640
+  y_scalar = 540 / 640
+  
+  for box in boxes:
+    for point in box.points:
+      point.x *= x_scalar
+      point.y *= y_scalar
+  
+  # merge the boxes
+  merged_boxes = []
+  for i in range(len(boxes)):
+    overlaps_with = False
+    # Check if the current box overlaps with any of the merged boxes
+    for j in range(len(merged_boxes)):
+      # It overlaps, so merge the two boxes
+      if is_overlap(boxes[i], merged_boxes[j]):
+        overlaps_with = True
+        merged_boxes[j] = merge_rectangles(boxes[i], merged_boxes[j])
+        break
+    # It doesn't overlap with any of the merged boxes, so add it to the list
+    if(not overlaps_with):
+      merged_boxes.append(boxes[i])
+      
+  return merged_boxes
+
 def labelImage(filename: str):
   # open up new image
   # Since it is 960x540, split it into two 540x540 images
   img = cv2.imread(filename)
   
-  merged_boxes = getMergedBoxesForImg(img)
+  merged_boxes = getBoxesForScaledImg(img)
   
   # Now add the labels to the image
   for i in range(len(merged_boxes)):
