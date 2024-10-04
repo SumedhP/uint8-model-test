@@ -25,43 +25,39 @@ def sigmoid(x):
   return 1 / (1 + np.exp(-x))
 
 def is_overlap(rect1: Match, rect2: Match) -> bool:
-    # Extract the corners of both rectangles
-    r1_min_x = min(rect1.points[0].x, rect1.points[1].x, rect1.points[2].x, rect1.points[3].x)
-    r1_max_x = max(rect1.points[0].x, rect1.points[1].x, rect1.points[2].x, rect1.points[3].x)
-    r1_min_y = min(rect1.points[0].y, rect1.points[1].y, rect1.points[2].y, rect1.points[3].y)
-    r1_max_y = max(rect1.points[0].y, rect1.points[1].y, rect1.points[2].y, rect1.points[3].y)
-    
-    r2_min_x = min(rect2.points[0].x, rect2.points[1].x, rect2.points[2].x, rect2.points[3].x)
-    r2_max_x = max(rect2.points[0].x, rect2.points[1].x, rect2.points[2].x, rect2.points[3].x)
-    r2_min_y = min(rect2.points[0].y, rect2.points[1].y, rect2.points[2].y, rect2.points[3].y)
-    r2_max_y = max(rect2.points[0].y, rect2.points[1].y, rect2.points[2].y, rect2.points[3].y)
-    
-    # Check if the rectangles overlap
-    x_overlap = (r1_max_x >= r2_min_x) and (r2_max_x >= r1_min_x)
-    y_overlap = (r1_max_y >= r2_min_y) and (r2_max_y >= r1_min_y)
-    
-    return x_overlap and y_overlap
-  
+    # Calculate the bounding box of rect1
+    r1_x_coords = [point.x for point in rect1.points]
+    r1_y_coords = [point.y for point in rect1.points]
+    r1_min_x, r1_max_x = min(r1_x_coords), max(r1_x_coords)
+    r1_min_y, r1_max_y = min(r1_y_coords), max(r1_y_coords)
+
+    # Calculate the bounding box of rect2
+    r2_x_coords = [point.x for point in rect2.points]
+    r2_y_coords = [point.y for point in rect2.points]
+    r2_min_x, r2_max_x = min(r2_x_coords), max(r2_x_coords)
+    r2_min_y, r2_max_y = min(r2_y_coords), max(r2_y_coords)
+
+    # Check if the bounding boxes overlap
+    return (r1_max_x >= r2_min_x and r2_max_x >= r1_min_x) and (r1_max_y >= r2_min_y and r2_max_y >= r1_min_y)
+
+
 def merge_rectangles(rect1: Match, rect2: Match) -> Match:
-    # Extract all x and y coordinates from both rectangles
+    # Extract all x and y coordinates from both rectangles in one go
     x_coords = [p.x for p in rect1.points] + [p.x for p in rect2.points]
     y_coords = [p.y for p in rect1.points] + [p.y for p in rect2.points]
     
-    # Find the min and max x and y values
-    min_x = min(x_coords)
-    max_x = max(x_coords)
-    min_y = min(y_coords)
-    max_y = max(y_coords)
+    # Compute new boundary coordinates (min/max x and y)
+    min_x, max_x = min(x_coords), max(x_coords)
+    min_y, max_y = min(y_coords), max(y_coords)
     
-    # Create the merged rectangle with new boundaries
-    merged_rectangle = Match([
+    # Return the merged rectangle
+    return Match([
         Point(min_x, min_y),  # Bottom-left
         Point(min_x, max_y),  # Top-left
         Point(max_x, max_y),  # Top-right
         Point(max_x, min_y)   # Bottom-right
     ], rect1.color, rect1.tag, max(rect1.confidence, rect2.confidence))
-    
-    return merged_rectangle
+
 
 color_to_word = ["Blue", "Red", "Neutral", "Purple"]
 tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
@@ -72,8 +68,6 @@ model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvid
 
 from typing import List
 def makeBoxesFromOutput(output) -> List[Match]:
-  start = time_ns()
-  
   boxes = []
   values = output[0]
   
@@ -105,9 +99,6 @@ def makeBoxesFromOutput(output) -> List[Match]:
       )
       boxes.append(box)
   
-  end = time_ns()
-  print(f"Time taken to make boxes: {(end - start) / 1e6} ms")
-  
   return boxes
 
 times = []
@@ -137,13 +128,14 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   end = time_ns()
   times.append((end - start) / 1e6)
   
-  output = np.array(output[0])
+  output = output[0]
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
   boxes = makeBoxesFromOutput(output)
   
   return boxes
 
+# Unused function
 def getMergedBoxesForImg(img: MatLike) -> List[Match]:
   offset = 960 - 540
   
@@ -177,6 +169,7 @@ def getMergedBoxesForImg(img: MatLike) -> List[Match]:
       
   return merged_boxes
 
+# Not as good as getMergedBoxesForImg
 def getBoxesForScaledImg(img: MatLike) -> List[Match]:
   # Resize from a 960x540 image to a 640x640 image
   resized_img = cv2.resize(img, (640, 640))
@@ -189,22 +182,20 @@ def getBoxesForScaledImg(img: MatLike) -> List[Match]:
     for point in box.points:
       point.x *= x_scalar
       point.y *= y_scalar
-  
+      
   # merge the boxes
   merged_boxes = []
-  for i in range(len(boxes)):
-    overlaps_with = False
-    # Check if the current box overlaps with any of the merged boxes
+  for box in boxes:
+    merged = False
     for j in range(len(merged_boxes)):
-      # It overlaps, so merge the two boxes
-      if is_overlap(boxes[i], merged_boxes[j]):
-        overlaps_with = True
-        merged_boxes[j] = merge_rectangles(boxes[i], merged_boxes[j])
+      # Merge the boxes if they overlap
+      if is_overlap(box, merged_boxes[j]):
+        merged_boxes[j] = merge_rectangles(box, merged_boxes[j])
+        merged = True
         break
-    # It doesn't overlap with any of the merged boxes, so add it to the list
-    if(not overlaps_with):
-      merged_boxes.append(boxes[i])
-      
+    if not merged:
+        merged_boxes.append(box)
+  
   return merged_boxes
 
 def labelImage(filename: str):
