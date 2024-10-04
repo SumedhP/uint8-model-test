@@ -1,32 +1,8 @@
-import onnxruntime as ort
-
-print(ort.get_available_providers())
-
-sessionOptions = ort.SessionOptions()
-
-model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
-
-input_name = model.get_inputs()[0].name
-output_name = model.get_outputs()[0].name
-
-print("Model input name: ", input_name)
-print(model.get_inputs()[0])
-
-print("Model output name: ", output_name)
-print(model.get_outputs()[0])
-
-color_to_word = ["Blue", "Red", "Neutral", "Purple"]
-tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
-
+import cv2
+import cv2.dnn as dnn
 import numpy as np
-
-def inverseSigmoid(x: float) -> float:
-  return -np.log(1 / x - 1)
-
-def sigmoid(x):
-  return 1 / (1 + np.exp(-x))
-
 from dataclasses import dataclass
+from cv2.typing import MatLike
 
 @dataclass
 class Point:
@@ -39,6 +15,12 @@ class Match:
   color: str
   tag: str
   confidence: float
+
+def inverseSigmoid(x: float) -> float:
+  return -np.log(1 / x - 1)
+
+def sigmoid(x):
+  return 1 / (1 + np.exp(-x))
 
 def is_overlap(rect1: Match, rect2: Match) -> bool:
     # Extract the corners of both rectangles
@@ -78,7 +60,16 @@ def merge_rectangles(rect1: Match, rect2: Match) -> Match:
     ], rect1.color, rect1.tag, max(rect1.confidence, rect2.confidence))
     
     return merged_rectangle
-  
+
+color_to_word = ["Blue", "Red", "Neutral", "Purple"]
+tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
+
+import onnxruntime as ort
+sessionOptions = ort.SessionOptions()
+model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
+
+from time import time
+
 from typing import List
 def makeBoxesFromOutput(output) -> List[Match]:
   boxes = []
@@ -104,46 +95,26 @@ def makeBoxesFromOutput(output) -> List[Match]:
   return boxes
 
 times = []
-
-import cv2
-from cv2.typing import MatLike
-
-cv2Model = cv2.dnn.readNetFromONNX("model.onnx")
-
 def getBoxesForImg(img: MatLike) -> List[Match]:
   # create a black image and paste the resized image on it
   input_img = np.full((640, 640, 3), 127, dtype=np.uint8)
   input_img[0:img.shape[0], 0:img.shape[1]] = img
+  input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
   
-  # # Normalize the image to [0, 1] range by dividing by 255
-  # input_img = input_img.astype(np.float32) / 255.0
-
-  # # Transpose to the format (channels, height, width) expected by ONNX models
-  # input_img = np.transpose(input_img, (2, 0, 1))
-
-  # # Add batch dimension, making the shape (1, channels, height, width)
-  # input_img = np.expand_dims(input_img, axis=0)
-  
+  # Make input to system
   x = cv2.dnn.blobFromImage(input_img) / 255.0
-  
-  onnx_input = {input_name: input_img}
+  onnx_input = {"images": x}
   
   from time import time_ns
-  
   start = time_ns()
-  # output = model.run(None, onnx_input)
-  cv2Model.setInput(x)  
-  output = cv2Model.forward()
-  
+  output = model.run(None, onnx_input)
   end = time_ns()
-  # print("Time taken: ", (end - start) / 1e6, "ms")
   times.append((end - start) / 1e6)
-
-  # output = np.array(output[0])
+  
+  output = np.array(output[0])
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
   boxes = makeBoxesFromOutput(output)
-  print(len(boxes))
   
   return boxes
 
@@ -185,35 +156,36 @@ def labelImage(filename: str):
   # Since it is 960x540, split it into two 540x540 images
   img = cv2.imread(filename)
   
-  offset = 960 - 540
+  merged_boxes = getMergedBoxesForImg(img)
   
-  img1 = img[0:540, 0:540]
-  img1_boxes = getBoxesForImg(img1)
+  # Now rotate the image 180 degrees clockwise
+  img = cv2.rotate(img, cv2.ROTATE_180)
+  rotated_merged_boxes = getMergedBoxesForImg(img)
   
-  img2 = img[0:540, offset:offset+540]
-  img2_boxes = getBoxesForImg(img2)
-  
-  # Offset the x values of the second image
-  for box in img2_boxes:
+  # Adjust the points in all of these rotated boxes to match the original image
+  for box in rotated_merged_boxes:
     for point in box.points:
-      point.x += offset
+      point.x = 960 - point.x
+      point.y = 540 - point.y
   
-  # Merge the two lists
-  img1_boxes.extend(img2_boxes)
-  # Now merge overlapping boxes
-  merged_boxes = []
-  for i in range(len(img1_boxes)):
-    overlaps_with = False
-    # Check if the current box overlaps with any of the merged boxes
-    for j in range(len(merged_boxes)):
-      # It overlaps, so merge the two boxes
-      if is_overlap(img1_boxes[i], merged_boxes[j]):
-        overlaps_with = True
-        merged_boxes[j] = merge_rectangles(img1_boxes[i], merged_boxes[j])
-        break
-    # It doesn't overlap with any of the merged boxes, so add it to the list
-    if(not overlaps_with):
-      merged_boxes.append(img1_boxes[i])
+  # Now check to see if any are tagged as sentry in the rotated, but not in the original
+  found_sentry = False
+  matched_sentry = False
+  for box in rotated_merged_boxes:
+    if box.tag != "Sentry":
+      continue
+    found_sentry = True
+    for other_box in merged_boxes:
+      if is_overlap(box, other_box):
+        other_box.tag = "Sentry"
+        matched_sentry = True
+  
+  if(not found_sentry):
+    print("No sentry found in rotated image")
+  elif(not matched_sentry):
+    print("Sentry found in rotated image, but not in original")
+    
+  img = cv2.rotate(img, cv2.ROTATE_180)
   
   # Now add the labels to the image
   for i in range(len(merged_boxes)):
