@@ -121,7 +121,10 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   
   onnx_input = {"images": input_img}
   
+  start = time_ns()
   output = model.run(None, onnx_input)
+  end = time_ns()
+  print(f"Time taken to run model: {(end - start) / 1e6} ms")
   output = output[0]
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
@@ -210,4 +213,4 @@ def labelImage(filename: str):
       cv2.line(img, (int(box.points[j].x), int(box.points[j].y)), (int(box.points[(j + 1) % 4].x), int(box.points[(j + 1) % 4].y)), (0, 255, 0), 2)
     cv2.putText(img, f'{box.color} {box.tag}', (int(box.points[0].x), int(box.points[0].y - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
   
-  return img, (end - start) / 1e6
+  return img
