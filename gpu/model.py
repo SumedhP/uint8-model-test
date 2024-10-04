@@ -70,29 +70,43 @@ import onnxruntime as ort
 sessionOptions = ort.SessionOptions()
 model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
 
-from time import time
-
 from typing import List
 def makeBoxesFromOutput(output) -> List[Match]:
+  start = time_ns()
+  
   boxes = []
   values = output[0]
-  # Filter out the values that have a confidence below 0.5
-  filtered_values = [element for element in values if element[8] >= inverseSigmoid(0.5)]
   
-  for i in range(len(filtered_values)):
-    element = filtered_values[i]
-    colors = element[9:9+4]
-    most_likely_color = np.argmax(colors)
-    tags = element[13:13+9]
-    most_likely_tag = np.argmax(tags)
-    confidence = sigmoid(element[8])
-    
-    bottom_left = Point(element[0], element[1])
-    top_left = Point(element[2], element[3])
-    top_right = Point(element[4], element[5])
-    bottom_right = Point(element[6], element[7])
-    box = Match([bottom_left, top_left, top_right, bottom_right], color_to_word[most_likely_color], tag_to_word[most_likely_tag], confidence)
-    boxes.append(box)
+  # Filter using NumPy vectorization for confidence threshold
+  values = np.array(values)
+  confidence_scores = values[:, 8]  # Extract the confidence column
+  filtered_indices = confidence_scores >= inverseSigmoid(0.5)  # Boolean mask for confidence >= 0.5
+  filtered_values = values[filtered_indices]
+
+  # Loop over the filtered values
+  for element in filtered_values:
+      # Extract most likely color and tag using np.argmax
+      most_likely_color = np.argmax(element[9:13])  # Slice directly for color indices
+      most_likely_tag = np.argmax(element[13:22])  # Slice directly for tag indices
+      confidence = sigmoid(element[8])  # Convert confidence score using sigmoid
+
+      # Define corners using Point
+      bottom_left = Point(element[0], element[1])
+      top_left = Point(element[2], element[3])
+      top_right = Point(element[4], element[5])
+      bottom_right = Point(element[6], element[7])
+      
+      # Create the Match object
+      box = Match(
+          [bottom_left, top_left, top_right, bottom_right],
+          color_to_word[most_likely_color],
+          tag_to_word[most_likely_tag],
+          confidence
+      )
+      boxes.append(box)
+  
+  end = time_ns()
+  print(f"Time taken to make boxes: {(end - start) / 1e6} ms")
   
   return boxes
 
@@ -103,17 +117,10 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   input_img = np.full((640, 640, 3), 127, dtype=np.uint8)
   input_img[0:img.shape[0], 0:img.shape[1]] = img
   
-  start = time_ns()
-  
   # Manually convert BGR to RGB by swapping the color channels
   input_img = input_img[..., ::-1]
   
-  end = time_ns()
-  print("Color conversion took: ", (end - start) / 1e6)
-
-  
   # The following bit is done to replace the cv2.dnn.blobFromImage function
-  
   # Normalize the image to [0, 1] range by dividing by 255
   input_img = input_img.astype(np.float32) / 255.0
 
