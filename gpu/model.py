@@ -101,8 +101,6 @@ def makeBoxesFromOutput(output) -> List[Match]:
   
   return boxes
 
-times = []
-
 def getBoxesForImg(img: MatLike) -> List[Match]:
   # create a black image and paste the resized image on it
   input_img = np.full((640, 640, 3), 127, dtype=np.uint8)
