@@ -4,14 +4,14 @@ import cv2
 from tqdm import tqdm
 
 # Open all the files in the directory
-FILE_DIRECTORY = 'temporar'
-OUTPUT_DIRECTORY = 'temporar_output'
+FILE_DIRECTORY = 'one_img'
+OUTPUT_DIRECTORY = 'one_output'
 
 files = os.listdir(FILE_DIRECTORY)
 
 print("Found, ", len(files), " files")
 
-for file in tqdm(files):
+for file in files:
   labelled_image = labelImage(os.path.join(FILE_DIRECTORY, file))
   cv2.imwrite(os.path.join(OUTPUT_DIRECTORY, file), labelled_image)
 

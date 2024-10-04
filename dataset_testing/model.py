@@ -162,14 +162,22 @@ def labelImage(filename: str):
       point.y = 540 - point.y
   
   # Now check to see if any are tagged as sentry in the rotated, but not in the original
+  found_sentry = False
+  matched_sentry = False
   for box in rotated_merged_boxes:
     if box.tag != "Sentry":
       continue
-    
+    found_sentry = True
     for other_box in merged_boxes:
       if is_overlap(box, other_box):
         other_box.tag = "Sentry"
+        matched_sentry = True
   
+  if(not found_sentry):
+    print("No sentry found in rotated image")
+  elif(not matched_sentry):
+    print("Sentry found in rotated image, but not in original")
+    
   img = cv2.rotate(img, cv2.ROTATE_180)
   
   # Now add the labels to the image
