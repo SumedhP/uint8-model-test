@@ -1,19 +1,24 @@
-from model import labelImage
+from model import labelImage, times
 import os
 import cv2
 from tqdm import tqdm
 
 # Open all the files in the directory
-FILE_DIRECTORY = 'one_img'
-OUTPUT_DIRECTORY = 'one_output'
+FILE_DIRECTORY = 'half_dataset'
+OUTPUT_DIRECTORY = 'half_dataset_output'
 
 files = os.listdir(FILE_DIRECTORY)
 
 print("Found, ", len(files), " files")
 
-for file in files:
+for file in tqdm(files):
   labelled_image = labelImage(os.path.join(FILE_DIRECTORY, file))
   cv2.imwrite(os.path.join(OUTPUT_DIRECTORY, file), labelled_image)
+
+import matplotlib.pyplot as plt
+
+plt.hist(times, bins=100)
+plt.show()
 
 # print("Finished labelling images")
 # print("Now compiling images into a video")

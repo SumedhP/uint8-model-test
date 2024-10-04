@@ -1,16 +1,22 @@
 import onnxruntime as ort
 
 print(ort.get_available_providers())
-model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvider'])
+
+sessionOptions = ort.SessionOptions()
+
+model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
 
 input_name = model.get_inputs()[0].name
+output_name = model.get_outputs()[0].name
 
 print("Model input name: ", input_name)
 print(model.get_inputs()[0])
 
+print("Model output name: ", output_name)
+print(model.get_outputs()[0])
+
 color_to_word = ["Blue", "Red", "Neutral", "Purple"]
 tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
-
 
 import numpy as np
 
@@ -97,34 +103,50 @@ def makeBoxesFromOutput(output) -> List[Match]:
   
   return boxes
 
+times = []
+
 import cv2
-def getBoxesForImg(img) -> List[Match]:
+from cv2.typing import MatLike
+
+cv2Model = cv2.dnn.readNetFromONNX("model.onnx")
+
+def getBoxesForImg(img: MatLike) -> List[Match]:
   # create a black image and paste the resized image on it
   input_img = np.full((640, 640, 3), 127, dtype=np.uint8)
   input_img[0:img.shape[0], 0:img.shape[1]] = img
-  input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
   
-  # Make input to system
+  # # Normalize the image to [0, 1] range by dividing by 255
+  # input_img = input_img.astype(np.float32) / 255.0
+
+  # # Transpose to the format (channels, height, width) expected by ONNX models
+  # input_img = np.transpose(input_img, (2, 0, 1))
+
+  # # Add batch dimension, making the shape (1, channels, height, width)
+  # input_img = np.expand_dims(input_img, axis=0)
+  
   x = cv2.dnn.blobFromImage(input_img) / 255.0
   
-  onnx_input = {input_name: x}
+  onnx_input = {input_name: input_img}
   
   from time import time_ns
   
   start = time_ns()
-  output = model.run(None, onnx_input)
+  # output = model.run(None, onnx_input)
+  cv2Model.setInput(x)  
+  output = cv2Model.forward()
+  
   end = time_ns()
-  model.end_profiling()
-  print("Time taken: ", (end - start) / 1e6, "ms")
+  # print("Time taken: ", (end - start) / 1e6, "ms")
+  times.append((end - start) / 1e6)
 
-  output = np.array(output[0])
+  # output = np.array(output[0])
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
   boxes = makeBoxesFromOutput(output)
+  print(len(boxes))
   
   return boxes
 
-from cv2.typing import MatLike
 def getMergedBoxesForImg(img: MatLike) -> List[Match]:
   offset = 960 - 540
   
