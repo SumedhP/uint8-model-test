@@ -1,5 +1,4 @@
 import cv2
-import cv2.dnn as dnn
 import numpy as np
 from dataclasses import dataclass
 from cv2.typing import MatLike
@@ -124,7 +123,7 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   start = time_ns()
   output = model.run(None, onnx_input)
   end = time_ns()
-  print(f"Time taken to run model: {(end - start) / 1e6} ms")
+  # print(f"Time taken to run model: {(end - start) / 1e6} ms")
   output = output[0]
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
@@ -166,11 +165,11 @@ def getMergedBoxesForImg(img: MatLike) -> List[Match]:
       
   return merged_boxes
 
-
 # Not as good as getMergedBoxesForImg
 def getBoxesForScaledImg(img: MatLike) -> List[Match]:
   # Resize from a 960x540 image to a 640x640 image
   resized_img = cv2.resize(img, (640, 640))
+  
   boxes = getBoxesForImg(resized_img)
   
   x_scalar = 960 / 640
@@ -204,7 +203,7 @@ def labelImage(filename: str):
   start = time_ns()
   merged_boxes = getBoxesForScaledImg(img)
   end = time_ns()
-  print(f"Time taken to label image: {(end - start) / 1e6} ms")
+  # print(f"Time taken to label image: {(end - start) / 1e6} ms")
   
   # Now add the labels to the image
   for i in range(len(merged_boxes)):
