@@ -123,11 +123,7 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   
   onnx_input = {"images": input_img}
   
-  start = time_ns()
   output = model.run(None, onnx_input)
-  end = time_ns()
-  times.append((end - start) / 1e6)
-  
   output = output[0]
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
@@ -169,6 +165,7 @@ def getMergedBoxesForImg(img: MatLike) -> List[Match]:
       
   return merged_boxes
 
+
 # Not as good as getMergedBoxesForImg
 def getBoxesForScaledImg(img: MatLike) -> List[Match]:
   # Resize from a 960x540 image to a 640x640 image
@@ -203,7 +200,10 @@ def labelImage(filename: str):
   # Since it is 960x540, split it into two 540x540 images
   img = cv2.imread(filename)
   
+  start = time_ns()
   merged_boxes = getBoxesForScaledImg(img)
+  end = time_ns()
+  print(f"Time taken to label image: {(end - start) / 1e6} ms")
   
   # Now add the labels to the image
   for i in range(len(merged_boxes)):
