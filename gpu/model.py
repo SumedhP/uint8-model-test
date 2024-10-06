@@ -70,38 +70,8 @@ model_quant = "model_quant.onnx"
 # quantize_dynamic(model_path, model_quant, weight_type=QuantType.QUInt8)
 # print("Model quantized")
 
-# Statically quantize the model
-
-model_quant_static = "model_quant_static.onnx"
-# print("Statically quantizing model")
-import os
-files = os.listdir("half_dataset")
-
-from onnxruntime.quantization.calibrate import CalibrationDataReader
-class CalibrationDataReaderImpl(CalibrationDataReader):
-    def __init__(self, files):
-        self.files = files
-        self.idx = 0
-
-    def get_next(self):
-        if self.idx >= len(self.files):
-            return None
-        file = self.files[self.idx]
-        print(file)
-        self.idx += 1
-        img = cv2.imread(os.path.join("half_dataset", file))
-        img = cv2.resize(img, (640, 640))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # Now get blob from image
-        img = cv2.dnn.blobFromImage(img) / 255.0
-        return {"images": img}
-
-print("Statically quantizing model")
-quantize_static(model_path, model_quant_static, CalibrationDataReaderImpl(files))
-print("Model statically quantized")
-
 sessionOptions = ort.SessionOptions()
-model = ort.InferenceSession(model_quant_static, provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
+model = ort.InferenceSession(model_path, provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
 
 from typing import List
 def makeBoxesFromOutput(output) -> List[Match]:
