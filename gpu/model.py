@@ -61,7 +61,7 @@ def merge_rectangles(rect1: Match, rect2: Match) -> Match:
 color_to_word = ["Blue", "Red", "Neutral", "Purple"]
 tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
 
-from onnxruntime.quantization import quantize_dynamic, quantize_static, QuantType
+# from onnxruntime.quantization import quantize_dynamic, quantize_static, QuantType
 
 import onnxruntime as ort
 model_path = "model-infer.onnx"
@@ -131,7 +131,7 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   start = time_ns()
   output = model.run(None, onnx_input)
   end = time_ns()
-  print(f"Time taken to run model: {(end - start) / 1e6} ms")
+  # print(f"Time taken to run model: {(end - start) / 1e6} ms")
   output = output[0]
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
@@ -209,7 +209,7 @@ def labelImage(filename: str):
   img = cv2.imread(filename)
   
   start = time_ns()
-  merged_boxes = getBoxesForScaledImg(img)
+  merged_boxes = getMergedBoxesForImg(img)
   end = time_ns()
   # print(f"Time taken to label image: {(end - start) / 1e6} ms")
   

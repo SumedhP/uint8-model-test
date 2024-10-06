@@ -17,7 +17,7 @@ print("Found, ", len(files), " files")
 
 times = []
 
-for file in files:
+for file in tqdm(files):
   labelled_image = labelImage(os.path.join(FILE_DIRECTORY, file))
   cv2.imwrite(os.path.join(OUTPUT_DIRECTORY, file), labelled_image)
 
