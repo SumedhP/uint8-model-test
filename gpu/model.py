@@ -61,9 +61,17 @@ def merge_rectangles(rect1: Match, rect2: Match) -> Match:
 color_to_word = ["Blue", "Red", "Neutral", "Purple"]
 tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base", "Base big armor"]
 
+from onnxruntime.quantization import quantize_dynamic, quantize_static, QuantType
+
 import onnxruntime as ort
+model_path = "model-infer.onnx"
+model_quant = "model_quant.onnx"
+# print("Quantizing model")
+# quantize_dynamic(model_path, model_quant, weight_type=QuantType.QUInt8)
+# print("Model quantized")
+
 sessionOptions = ort.SessionOptions()
-model = ort.InferenceSession("model.onnx", provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
+model = ort.InferenceSession(model_path, provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
 
 from typing import List
 def makeBoxesFromOutput(output) -> List[Match]:
@@ -123,7 +131,7 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
   start = time_ns()
   output = model.run(None, onnx_input)
   end = time_ns()
-  # print(f"Time taken to run model: {(end - start) / 1e6} ms")
+  print(f"Time taken to run model: {(end - start) / 1e6} ms")
   output = output[0]
   
   # Now evaluate the output, only making a Match object if the confidence is above 0.5
