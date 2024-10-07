@@ -71,6 +71,26 @@ model_quant = "model_quant.onnx"
 # print("Model quantized")
 
 sessionOptions = ort.SessionOptions()
+sessionOptions.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL # May ot may not be faster
+sessionOptions.optimized_model_filepath = "really_optimized_model.onnx"
+
+# Provider options for GPU
+providers = [
+    ('TensorrtExecutionProvider', {
+        'device_id': 0,                       # Select GPU to execute
+        'trt_max_workspace_size': 2 * 1024 * 1024 * 1024, # Set GPU memory usage limit (2GB)
+        'trt_int8_enable': True,              # Enable INT8 precision for faster inference  
+    }),
+    ('CUDAExecutionProvider', {
+        'device_id': 0, # Select GPU to execute
+        'arena_extend_strategy': 'kNextPowerOfTwo', 
+        'gpu_mem_limit': 2 * 1024 * 1024 * 1024, # 2 GB
+        'cudnn_conv_algo_search': 'DEFAULT', # The exhuastive one might be slower
+        'do_copy_in_default_stream': True, # False leads to race conditions and maybe faster performance
+    })
+]
+
+# Provider options for CPU
 model = ort.InferenceSession(model_path, provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
 
 from typing import List
