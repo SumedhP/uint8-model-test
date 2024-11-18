@@ -5,8 +5,8 @@ from tqdm import tqdm
 
 def main():
   # Open all the files in the directory
-  FILE_DIRECTORY = 'half_dataset'
-  OUTPUT_DIRECTORY = 'half_dataset_output'
+  FILE_DIRECTORY = '1_9'
+  OUTPUT_DIRECTORY = 'flipped output ' + FILE_DIRECTORY + ' grey'
 
   # Make output dir if it doesn't exist
   if not os.path.exists(OUTPUT_DIRECTORY):
@@ -23,13 +23,14 @@ def main():
   print("Finished labelling images")
   print("Now compiling images into a video")
 
-  # # Now compile the images into a mp4 video 
-  # fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # For MP4 format
-  # videoWriter = cv2.VideoWriter('output.mp4', fourcc, 30, (960, 540))
-  # images = [cv2.imread(os.path.join(OUTPUT_DIRECTORY, file)) for file in files]
-  # for image in tqdm(images):
-  #   videoWriter.write(image)
-  # videoWriter.release()
+  # Now compile the images into a mp4 video 
+  fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # For MP4 format
+  output_file = 'output_' + FILE_DIRECTORY + '.mp4'
+  videoWriter = cv2.VideoWriter(output_file, fourcc, 30, (960, 540))
+  images = [cv2.imread(os.path.join(OUTPUT_DIRECTORY, file)) for file in files]
+  for image in tqdm(images):
+    videoWriter.write(image)
+  videoWriter.release()
 
 
 if __name__ == "__main__":

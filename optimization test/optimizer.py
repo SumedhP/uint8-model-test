@@ -2,7 +2,7 @@ import numpy as np
 import onnxruntime
 import time
 import os
-from onnxruntime.quantization import QuantFormat, QuantType, quantize_static
+from onnxruntime.quantization import QuantFormat, QuantType, quantize_static, quantize_dynamic
 from onnxruntime.quantization import CalibrationDataReader
 import cv2
 
@@ -65,10 +65,10 @@ class DataReader(CalibrationDataReader):
 
 def benchmark(model_path):
     session = onnxruntime.InferenceSession(model_path)
-    input_name = session.get_inputs()[0].name
+    input_name = "images"
 
     total = 0.0
-    runs = 100
+    runs = 10
     input_data = np.zeros((1, 3, 640, 640), np.float32)
     # Warming up
     _ = session.run([], {input_name: input_data})
@@ -84,7 +84,7 @@ def benchmark(model_path):
 
 def main():
     input_model_path = "model-preprocess.onnx"
-    output_model_path = "model-quantized-uint8.onnx"
+    output_model_path = "model-quantized.onnx"
 
     calibration_dataset_path = "data_formatted"
 
@@ -100,10 +100,15 @@ def main():
         dr,
         quant_format=QuantFormat.QDQ,
         per_channel=False,
-        weight_type=QuantType.QUInt8,
+        weight_type=QuantType.QInt8,
     )
     
     print("Model quantized.")
+    
+    # Dynamic quantize model
+    dynamic_output_model_path = "model-quantized-dynamic.onnx"
+    quantize_dynamic(input_model_path, dynamic_output_model_path)
+    
     
     print("Calibrated and quantized model saved.")
 
@@ -112,6 +117,9 @@ def main():
 
     print("benchmarking int8 model...")
     benchmark(output_model_path)
+    
+    print("benchmarking dynamic model...")
+    benchmark(dynamic_output_model_path)
 
 
 if __name__ == "__main__":

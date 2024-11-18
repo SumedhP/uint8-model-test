@@ -49,13 +49,15 @@ def merge_rectangles(rect1: Match, rect2: Match) -> Match:
     min_x, max_x = min(x_coords), max(x_coords)
     min_y, max_y = min(y_coords), max(y_coords)
     
+    tag = rect1.tag if rect1.confidence > rect2.confidence else rect2.tag
+    
     # Return the merged rectangle
     return Match([
         Point(min_x, min_y),  # Bottom-left
         Point(min_x, max_y),  # Top-left
         Point(max_x, max_y),  # Top-right
         Point(max_x, min_y)   # Bottom-right
-    ], rect1.color, rect1.tag, max(rect1.confidence, rect2.confidence))
+    ], rect1.color, tag, max(rect1.confidence, rect2.confidence))
 
 
 color_to_word = ["Blue", "Red", "Neutral", "Purple"]
@@ -91,7 +93,7 @@ providers = [
 ]
 
 # Provider options for CPU
-model = ort.InferenceSession(model_path, provider_options=['CPUExecutionProvider'], sess_options=sessionOptions)
+model = ort.InferenceSession("model-infer.onnx", sess_options=sessionOptions)
 
 from typing import List
 def makeBoxesFromOutput(output) -> List[Match]:
@@ -227,6 +229,21 @@ def labelImage(filename: str):
   # open up new image
   # Since it is 960x540, split it into two 540x540 images
   img = cv2.imread(filename)
+  
+  # Flip vertically
+  img = cv2.flip(img, 0)
+  
+  # # Greyscale image but keep dimensions
+  grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+  
+  img = cv2.cvtColor(grey, cv2.COLOR_GRAY2BGR)
+  
+  # grey = np.stack((np.zeros(grey.shape),np.zeros(grey.shape),grey), axis=-1)
+  # img = grey
+  
+  
+  
+  
   
   start = time_ns()
   merged_boxes = getMergedBoxesForImg(img)
