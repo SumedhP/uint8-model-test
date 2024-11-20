@@ -220,6 +220,9 @@ def getBoxesForCroppedImg(img: MatLike) -> List[Match]:
     cv2.imshow("Image", img)
     cv2.waitKey(0)
     
+    # Save this image
+    cv2.imwrite("cropped sentry.jpg", img)
+    
     boxes = getBoxesForImg(img)
 
     # Scale the points back to the original image
