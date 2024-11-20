@@ -24,7 +24,7 @@ def getBoxesFromOutput(output) -> List[Match]:
     confience_values = values[:, 8]
     indices = np.where(confience_values > BBOX_CONFIDENCE_THRESHOLD)
     values = values[indices]
-    
+
     temp = np.array(grid_strides)
     curr_grid_strides = temp[indices]
 
@@ -69,6 +69,8 @@ def getBoxesFromOutput(output) -> List[Match]:
 
 
 def makeImageAsInput(img: MatLike) -> np.ndarray:
+    # Assert that the image is 416x416
+    assert img.shape == (416, 416, 3)
     img = img.astype(np.float32)
     img = np.transpose(img, (2, 0, 1))
     img = np.expand_dims(img, axis=0)
@@ -124,7 +126,7 @@ def putTextOnImage(img: MatLike, boxes: List[Match]) -> MatLike:
 def timing(img: MatLike):
     from time import time_ns
 
-    ITERATIONS = 100
+    ITERATIONS = 1000
     time = 0
     for i in range(ITERATIONS):
         start = time_ns()
