@@ -219,7 +219,7 @@ def getBoxesForCroppedImg(img: MatLike) -> List[Match]:
     # show this image
     cv2.imshow("Image", img)
     cv2.waitKey(0)
-
+    
     boxes = getBoxesForImg(img)
 
     # Scale the points back to the original image
@@ -258,7 +258,8 @@ def labelImage(filename: str):
         print(box)
     print()
 
-    merged_boxes = mergeBoxes(boxes)
+    # merged_boxes = mergeBoxes(boxes)
+    merged_boxes = boxes
 
     print("Number of boxes: ", len(merged_boxes))
     print("Detected this: \n ")
@@ -268,6 +269,8 @@ def labelImage(filename: str):
     print()
 
     # merged_boxes = scaleBoxes(merged_boxes)
+    
+    img = cv2.imread("cropped sentry.jpg")
 
     # Now add the labels to the image
     for i in range(len(merged_boxes)):
@@ -294,8 +297,8 @@ def labelImage(filename: str):
 
 
 def main():
-    filename = "test_images/multirobot.jpg"
-    # filename = "test_images/sentry_up.jpg"
+    # filename = "test_images/multirobot.jpg"
+    filename = "test_images/sentry_up.jpg"
     img = labelImage(filename)
     cv2.imshow("Image", img)
     cv2.waitKey(0)
