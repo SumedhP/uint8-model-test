@@ -5,10 +5,10 @@ from cv2.typing import MatLike
 from model import getBoxesForImg, mergeListOfMatches, putTextOnImage
 from typing import List
 from Match import Match
+from time import time_ns
+
 
 TARGET_WH = 416
-
-
 def compressImageAndScaleOutput(img: MatLike) -> List[Match]:
     input_w = img.shape[1]
     input_h = img.shape[0]
@@ -55,8 +55,6 @@ def main():
     OUTPUT_FOLDER = INPUT_NAME + "_labelled/"
     INPUT_FOLDER = INPUT_NAME + "/"
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-    from time import time_ns
 
     time_running = 0
 
