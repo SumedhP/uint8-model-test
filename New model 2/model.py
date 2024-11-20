@@ -21,17 +21,19 @@ def getBoxesFromOutput(output) -> List[Match]:
     NUM_COLORS = 8
     NUM_TAGS = 8
 
+    confience_values = values[:, 8]
+    indices = np.where(confience_values > BBOX_CONFIDENCE_THRESHOLD)
+    values = values[indices]
+    
+    temp = np.array(grid_strides)
+    curr_grid_strides = temp[indices]
+
     for i in range(len(values)):
         element = values[i]
-        
-        confidence = element[8]
-        
-        if confidence < BBOX_CONFIDENCE_THRESHOLD:
-            continue
-        
-        grid0 = grid_strides[i].grid0
-        grid1 = grid_strides[i].grid1
-        stride = grid_strides[i].stride
+
+        grid0 = curr_grid_strides[i].grid0
+        grid1 = curr_grid_strides[i].grid1
+        stride = curr_grid_strides[i].stride
 
         x_1 = (element[0] + grid0) * stride
         y_1 = (element[1] + grid1) * stride
@@ -41,6 +43,8 @@ def getBoxesFromOutput(output) -> List[Match]:
         y_3 = (element[5] + grid1) * stride
         x_4 = (element[6] + grid0) * stride
         y_4 = (element[7] + grid1) * stride
+
+        confidence = element[8]
 
         color = np.argmax(element[9 : 9 + NUM_COLORS])
         tag = np.argmax(element[9 + NUM_COLORS : 9 + NUM_COLORS + NUM_TAGS])
@@ -116,18 +120,21 @@ def putTextOnImage(img: MatLike, boxes: List[Match]) -> MatLike:
 
     return img
 
+
 def timing(img: MatLike):
     from time import time_ns
-    ITERATIONS = 1000
+
+    ITERATIONS = 100
     time = 0
     for i in range(ITERATIONS):
-      start = time_ns()
-      boxes = getBoxesForImg(img)
-      merged = mergeListOfMatches(boxes)
-      end = time_ns()
-      time += end - start
+        start = time_ns()
+        boxes = getBoxesForImg(img)
+        merged = mergeListOfMatches(boxes)
+        end = time_ns()
+        time += end - start
     avg_time = time / ITERATIONS
     print(f"Time taken: {(avg_time) / 1e6} ms")
+
 
 def main():
     INPUT_FOLDER = "input/"
@@ -136,28 +143,26 @@ def main():
     input_file = INPUT_FOLDER + filename
 
     img = cv2.imread(input_file)
+
     timing(img)
-    return
-    
-    
+
     boxes = getBoxesForImg(img)
     print("Found ", len(boxes), " boxes: \n")
     for box in boxes:
         print(box)
-        print()
-    
+
     merged = mergeListOfMatches(boxes)
     print("After merging: \n")
     for box in merged:
         print(box)
-        print()
-    
+
     img = putTextOnImage(img, merged)
     cv2.imshow("Image", img)
     cv2.waitKey(0)
-    
+
     output_file = "labelled_" + filename
     cv2.imwrite(output_file, img)
+
 
 if __name__ == "__main__":
     main()
