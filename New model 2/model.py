@@ -87,13 +87,9 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
 
 color_to_word = [
     "Blue",
-    "Filler 1",
     "Red",
-    "Filler 2",
     "Neutral",
-    "Filler 3",
     "Purple",
-    "Filler 4",
 ]
 tag_to_word = ["Sentry", "1", "2", "3", "4", "5", "Outpost", "Base"]
 
