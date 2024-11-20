@@ -49,7 +49,7 @@ def processImage(img: MatLike) -> List[Match]:
 
 
 def main():
-    INPUT_NAME = "1_58"
+    INPUT_NAME = "1_34"
     OUTPUT_FOLDER = INPUT_NAME + "_labelled/"
     INPUT_FOLDER = INPUT_NAME + "/"
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
