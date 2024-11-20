@@ -152,8 +152,6 @@ def main():
 
     timing(img)
     
-    return
-
     boxes = getBoxesForImg(img)
     print("Found ", len(boxes), " boxes: \n")
     for box in boxes:
