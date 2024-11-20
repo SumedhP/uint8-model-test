@@ -215,12 +215,12 @@ def getBoxesForCroppedImg(img: MatLike) -> List[Match]:
     y_scalar = 540 / INPUT_SIZE
     
     X_OFFSET = 210
-    Y_OFFSET = 0
+    Y_OFFSET = 75 # This one is a magic constant idk why it needed
     
     for box in boxes:
         for i in range(4):
-            box.points[i].x = box.points[i].x * x_scalar + 210
-            box.points[i].y = box.points[i].y * y_scalar
+            box.points[i].x = box.points[i].x * x_scalar + X_OFFSET
+            box.points[i].y = box.points[i].y * y_scalar + Y_OFFSET
     
     return boxes
 
