@@ -16,7 +16,9 @@ def compressImageAndScaleOutput(img: MatLike) -> List[Match]:
     scalar_w = input_w / TARGET_WH
     scalar_h = input_h / TARGET_WH
     img = cv2.resize(img, (TARGET_WH, TARGET_WH))
+
     boxes = getBoxesForImg(img)
+
     for box in boxes:
         for i in range(4):
             box.points[i].x = box.points[i].x * scalar_w
@@ -53,8 +55,9 @@ def main():
     OUTPUT_FOLDER = INPUT_NAME + "_labelled/"
     INPUT_FOLDER = INPUT_NAME + "/"
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    
+
     from time import time_ns
+
     time_running = 0
 
     for filename in tqdm(os.listdir(INPUT_FOLDER)):
@@ -70,6 +73,8 @@ def main():
 
     print("Images processed and saved in output_dataset folder")
 
+    return
+
     #  Now compile the images into a mp4 video
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # For MP4 format
     output_file = INPUT_NAME + "_output.mp4"
@@ -78,6 +83,7 @@ def main():
     for image in images:
         videoWriter.write(image)
     videoWriter.release()
+
 
 if __name__ == "__main__":
     main()

@@ -122,16 +122,24 @@ def putTextOnImage(img: MatLike, boxes: List[Match]) -> MatLike:
 def timing(img: MatLike):
     from time import time_ns
 
-    ITERATIONS = 1000
-    time = 0
+    # Give 1 start for processing
+    getBoxesForImg(img)
+
+    ITERATIONS = 500
+    times = []
     for i in range(ITERATIONS):
         start = time_ns()
         boxes = getBoxesForImg(img)
         merged = mergeListOfMatches(boxes)
         end = time_ns()
-        time += end - start
-    avg_time = time / ITERATIONS
+        times.append(end - start)
+    avg_time = np.mean(times)
     print(f"Time taken: {(avg_time) / 1e6} ms")
+    
+    import matplotlib.pyplot as plt
+    times = np.array(times) / 1e6
+    plt.hist(times, bins=50)
+    plt.show()
 
 
 def main():
@@ -143,6 +151,8 @@ def main():
     img = cv2.imread(input_file)
 
     timing(img)
+    
+    return
 
     boxes = getBoxesForImg(img)
     print("Found ", len(boxes), " boxes: \n")
