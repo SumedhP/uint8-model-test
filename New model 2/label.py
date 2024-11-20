@@ -73,8 +73,6 @@ def main():
 
     print("Images processed and saved in output_dataset folder")
 
-    return
-
     #  Now compile the images into a mp4 video
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # For MP4 format
     output_file = INPUT_NAME + "_output.mp4"
