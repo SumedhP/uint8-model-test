@@ -3,6 +3,7 @@ import numpy as np
 from dataclasses import dataclass
 from cv2.typing import MatLike
 from time import perf_counter_ns as time_ns
+from typing import List
 
 
 @dataclass
@@ -21,11 +22,30 @@ class Match:
     # Print in a nice format with color, tag, points, and confidence
     def __str__(self):
         return f"Color: {self.color}, Tag: {self.tag}, Points: {self.points}, Confidence: {self.confidence}"
-    
+
     # Default sort by confidence
     def __lt__(self, other):
         return self.confidence < other.confidence
 
+@dataclass 
+class GridAndStride:
+    grid0: int
+    grid1: int
+    stride: int
+
+
+def generateGridsAndStride() -> List[GridAndStride]:
+    INPUT_W = 416
+    INPUT_H = 416
+    STRIDES = [8, 16, 32]
+    output = []
+    for stride in STRIDES:
+        grid_h = INPUT_H // stride
+        grid_w = INPUT_W // stride
+        for i in range (grid_h):
+            for j in range(grid_w):
+                output.append(GridAndStride(i, j, stride))
+    return output
 
 def is_overlap(rect1: Match, rect2: Match) -> bool:
     # Calculate the bounding box of rect1
@@ -47,29 +67,12 @@ def is_overlap(rect1: Match, rect2: Match) -> bool:
 
 
 def merge_rectangles(rect1: Match, rect2: Match) -> Match:
-    # Extract all x and y coordinates from both rectangles in one go
-    x_coords = [p.x for p in rect1.points] + [p.x for p in rect2.points]
-    y_coords = [p.y for p in rect1.points] + [p.y for p in rect2.points]
-
-    # Compute new boundary coordinates (min/max x and y)
-    min_x, max_x = min(x_coords), max(x_coords)
-    min_y, max_y = min(y_coords), max(y_coords)
-
-    tag = rect1.tag if rect1.confidence > rect2.confidence else rect2.tag
-
-    # Return the merged rectangle
-    return Match(
-        [
-            Point(min_x, min_y),  # Bottom-left
-            Point(min_x, max_y),  # Top-left
-            Point(max_x, max_y),  # Top-right
-            Point(max_x, min_y),  # Bottom-right
-        ],
-        rect1.color,
-        tag,
-        max(rect1.confidence, rect2.confidence),
-    )
-
+    # If they are not same tag and color, throw an error
+    if rect1.color != rect2.color or rect1.tag != rect2.tag:
+        raise ValueError("Rectangles must have same color and tag to merge")
+    
+    # Just return the rectangle with higher confidence if they are the same
+    return rect1 if rect1.confidence > rect2.confidence else rect2 
 
 color_to_word = [
     "Blue",
@@ -95,9 +98,8 @@ print("Model input shape: ", model.get_inputs()[0].shape)
 print("Model input type: ", model.get_inputs()[0].type)
 print("Model input name: ", model.get_inputs()[0].name)
 
-from typing import List
-
 BBOX_CONFIDENCE_THRESHOLD = 0.85
+
 
 def getBoxesFromOutput(output) -> List[Match]:
     boxes = []
@@ -108,42 +110,41 @@ def getBoxesFromOutput(output) -> List[Match]:
 
     NUM_COLORS = 8
     NUM_TAGS = 8
-    
-    CONFIDENCE_INDEX = 8
-    confidence_values = values[:, CONFIDENCE_INDEX]
-    # Get the indices of the values that are above the threshold
-    indices = np.where(confidence_values > BBOX_CONFIDENCE_THRESHOLD)
-    values = values[indices]
-    
-    POINT_X_OFFSET = 204
-    POINT_Y_OFFSET = 142.5
-    X_SCALAR = 8.3
-    Y_SCALAR = 16.1
 
-    for element in values:
-        x_1 = element[0] * X_SCALAR + POINT_X_OFFSET
-        y_1 = element[1] * Y_SCALAR + POINT_Y_OFFSET
-        x_2 = element[2] * X_SCALAR + POINT_X_OFFSET
-        y_2 = element[3] * Y_SCALAR + POINT_Y_OFFSET
-        x_3 = element[4] * X_SCALAR + POINT_X_OFFSET
-        y_3 = element[5] * Y_SCALAR + POINT_Y_OFFSET
-        x_4 = element[6] * X_SCALAR + POINT_X_OFFSET
-        y_4 = element[7] * Y_SCALAR + POINT_Y_OFFSET
+    grid_strides = generateGridsAndStride()
+
+    for i in range(len(values)):
+        element = values[i]
+        
+        grid0 = grid_strides[i].grid0
+        grid1 = grid_strides[i].grid1
+        stride = grid_strides[i].stride
+        
+        
+        x_1 = (element[0] + grid0) * stride
+        y_1 = (element[1] + grid1) * stride
+        x_2 = (element[2] + grid0) * stride
+        y_2 = (element[3] + grid1) * stride
+        x_3 = (element[4] + grid0) * stride
+        y_3 = (element[5] + grid1) * stride
+        x_4 = (element[6] + grid0) * stride
+        y_4 = (element[7] + grid1) * stride
 
         confidence = element[8]
         color = np.argmax(element[9 : 9 + NUM_COLORS])
-        tag = np.argmax(
-            element[9 + NUM_COLORS : 9 + NUM_COLORS + NUM_TAGS]
-        )
+        tag = np.argmax(element[9 + NUM_COLORS : 9 + NUM_COLORS + NUM_TAGS])
 
         bottomLeft = Point(x_1, y_1)
         topLeft = Point(x_2, y_2)
         topRight = Point(x_3, y_3)
         bottomRight = Point(x_4, y_4)
-        
+
         if confidence > max_confidence:
             max_confidence = confidence
         
+        if confidence < BBOX_CONFIDENCE_THRESHOLD:
+            continue
+
         box = Match(
             [bottomLeft, topLeft, topRight, bottomRight],
             color_to_word[int(color / 2)],
@@ -159,6 +160,7 @@ def getBoxesFromOutput(output) -> List[Match]:
     boxes.sort(reverse=True)
 
     return boxes
+
 
 def getBoxesForImg(img: MatLike) -> List[Match]:
     # Convert to float
@@ -186,13 +188,18 @@ def getBoxesForImg(img: MatLike) -> List[Match]:
 
     return boxes
 
+
 def mergeBoxes(boxes: List[Match]) -> List[Match]:
     merged_boxes = []
     for box in boxes:
         merged = False
         for j in range(len(merged_boxes)):
             # Merge the boxes if they overlap
-            if is_overlap(box, merged_boxes[j]):
+            if (
+                is_overlap(box, merged_boxes[j])
+                and (box.color == merged_boxes[j].color)
+                and (box.tag == merged_boxes[j].tag)
+            ):
                 merged_boxes[j] = merge_rectangles(box, merged_boxes[j])
                 merged = True
                 break
@@ -201,50 +208,67 @@ def mergeBoxes(boxes: List[Match]) -> List[Match]:
 
     return merged_boxes
 
+
 def getBoxesForCroppedImg(img: MatLike) -> List[Match]:
     # Expects a 960 x 540 image
     # We take the center 540 x 540 image
     img = img[0:540, 210:750]
     # Resize to 416 x 416
     img = cv2.resize(img, (INPUT_SIZE, INPUT_SIZE))
-    
+
+    # show this image
+    cv2.imshow("Image", img)
+    cv2.waitKey(0)
+
     boxes = getBoxesForImg(img)
-    
+
     # Scale the points back to the original image
     x_scalar = 540 / INPUT_SIZE
     y_scalar = 540 / INPUT_SIZE
-    
-    X_OFFSET = 210
-    Y_OFFSET = 75 # This one is a magic constant idk why it needed
-    
+
     for box in boxes:
         for i in range(4):
-            box.points[i].x = box.points[i].x * x_scalar + X_OFFSET
-            box.points[i].y = box.points[i].y * y_scalar + Y_OFFSET
-    
+            box.points[i].x = box.points[i].x * x_scalar
+            box.points[i].y = box.points[i].y * y_scalar
+
     return boxes
 
+
+def scaleBoxes(boxes: List[Match]) -> List[Match]:
+    X_OFFSET = 40
+    Y_OFFSET = 168
+    X_SCALAR = 8.3
+    Y_SCALAR = 12.4
+
+    for box in boxes:
+        for i in range(4):
+            box.points[i].x = box.points[i].x * X_SCALAR + X_OFFSET + 210
+            box.points[i].y = box.points[i].y * Y_SCALAR + Y_OFFSET
+
+    return boxes
+
+
 def labelImage(filename: str):
-    # open up new image
-    # Since it is 960x540, split it into two 540x540 images
     img = cv2.imread(filename)
 
-    # Take a INPUT_SIZExINPUT_SIZE image
-    # # These are for sentry image
-    # X_OFFSET = 500
-    # Y_OFFSET = 100
-    # img = img[Y_OFFSET : Y_INPUT_SIZE, X_OFFSET : X_INPUT_SIZE]
-
-    # Show the image
-    # cv2.imshow("Image", img)
-    # cv2.waitKey(0)
-
     boxes = getBoxesForCroppedImg(img)
+    print()
+    print("Number of boxes: ", len(boxes))
+    for box in boxes:
+        print(box)
+    print()
+
     merged_boxes = mergeBoxes(boxes)
-    
+
     print("Number of boxes: ", len(merged_boxes))
-    print("Detected this: \n ", merged_boxes[0])
-    
+    print("Detected this: \n ")
+    for box in merged_boxes:
+        print(box)
+        print()
+    print()
+
+    # merged_boxes = scaleBoxes(merged_boxes)
+
     # Now add the labels to the image
     for i in range(len(merged_boxes)):
         box = merged_boxes[i]
@@ -270,7 +294,8 @@ def labelImage(filename: str):
 
 
 def main():
-    filename = "test_images/sentry2.jpg"
+    filename = "test_images/multirobot.jpg"
+    # filename = "test_images/sentry_up.jpg"
     img = labelImage(filename)
     cv2.imshow("Image", img)
     cv2.waitKey(0)
@@ -278,7 +303,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 """
 0: -3.98410
@@ -313,5 +337,4 @@ if __name__ == "__main__":
 8: Confidence
 9 - 16: Color
 17 - 24: Tag
-
 """
