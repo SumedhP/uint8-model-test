@@ -37,3 +37,5 @@ if __name__ == "__main__":
     print("Operations in the new model:")
     count_operations("HUST_model.onnx")
     
+    print("Operations in the new model preprocessed:")
+    count_operations("HUST_model_preprocessed.onnx")
