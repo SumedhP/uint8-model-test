@@ -18,7 +18,7 @@ def compressImageAndScaleOutput(img: MatLike) -> List[Match]:
     img = cv2.resize(img, (TARGET_WH, TARGET_WH))
 
     boxes = getBoxesForImg(img)
-
+    
     for box in boxes:
         for i in range(4):
             box.points[i].x = box.points[i].x * scalar_w
@@ -43,16 +43,16 @@ def splitImageRunTwice(img: MatLike) -> List[Match]:
 
     return boxes1 + boxes2
 
-
 def processImage(img: MatLike) -> List[Match]:
-    boxes = splitImageRunTwice(img)
+    # boxes = splitImageRunTwice(img)
+    boxes = compressImageAndScaleOutput(img)
     merged = mergeListOfMatches(boxes)
     return merged
 
 
 def main():
-    INPUT_NAME = "1_34"
-    OUTPUT_FOLDER = INPUT_NAME + "_labelled/"
+    INPUT_NAME = "2023_comp_footage/2_17"
+    OUTPUT_FOLDER = INPUT_NAME + "_labelled_once/"
     INPUT_FOLDER = INPUT_NAME + "/"
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
