@@ -26,13 +26,12 @@ NAME_LUT = {
 }
 
 img = cv2.imread("image.jpg")
-
 scalaing = 0.25
 
-# for interpolation in POSSIBLE_INTERPOLATIONS:
-#     img_resized = cv2.resize(img, None, fx=scalaing, fy=scalaing, interpolation=interpolation)
-#     cv2.imwrite(f"image_{NAME_LUT[interpolation]}.jpg", img_resized)
-#     print(f"Saved image_{NAME_LUT[interpolation]}.jpg")
+for interpolation in POSSIBLE_INTERPOLATIONS:
+    img_resized = cv2.resize(img, None, fx=scalaing, fy=scalaing, interpolation=interpolation)
+    cv2.imwrite(f"image_{NAME_LUT[interpolation]}.jpg", img_resized)
+    print(f"Saved image_{NAME_LUT[interpolation]}.jpg")
     
 import matplotlib.pyplot as plt
 
