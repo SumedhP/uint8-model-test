@@ -3,47 +3,33 @@ import numpy as np
 import time
 
 
-def fancy_benchmark_func(num_runs=1000, function=None):
-    start_time = time.time_ns()
+def benchmark_func(num_runs=1000, function=None, duration=5):
+    # Call once to warm up
+    function()
 
+    # Time the function calls
+    start_time = time.time_ns()
+    
     count = 0
+
+    # Call the function num_runs times or till it reachs 5 seconds
     for _ in range(num_runs):
         count += 1
         function()
-        current_time = time.time_ns()
-        print(
-            f"\r Current average: {1e9 / (current_time - start_time) * count:.2f} FPS",
-            end="",
-        )
+        if (time.time_ns() - start_time) > duration * 1e9:
+            break
 
     end_time = time.time_ns()
 
-    elapsed_time = (end_time - start_time) / 1e6
-    avg_time_per_run = elapsed_time / num_runs
-
-    print()
-    print(f"Benchmark complete: {num_runs} runs.")
-    print(f"Total time: {elapsed_time:.5f} milliseconds")
-    print(f"Average time per run: {avg_time_per_run:.5f} milliseconds")
-    print()
-
-
-def benchmark_func(num_runs=1000, function=None):
-    # Time the function calls
-    start_time = time.time_ns()
-
-    for _ in range(num_runs):
-        function()
-
-    end_time = time.time_ns()
+    num_runs = count
 
     # Calculate average time per run
-    elapsed_time = (end_time - start_time) / 1e6  # Convert to seconds
+    elapsed_time = end_time - start_time
     avg_time_per_run = elapsed_time / num_runs
 
     print(f"Benchmark complete: {num_runs} runs.")
-    print(f"Total time: {elapsed_time:.5f} milliseconds")
-    print(f"Average time per run: {avg_time_per_run:.5f} milliseconds")
+    print(f"Total time: {elapsed_time / 1e9:.5f} seconds")
+    print(f"Average time per run: {avg_time_per_run  / 1e6:.5f} milliseconds")
     print()
 
 
@@ -121,7 +107,7 @@ def benchmark_resize_pil(num_runs=1000):
     benchmark_func(num_runs, lambda: Image.fromarray(img).resize(TARGET_SIZE))
 
 
-def benchmark_onnx_model(model_path: str, num_runs=1000):
+def benchmark_onnx_model(model_path: str, num_runs=100000, duration=5):
     import onnxruntime as ort
     import numpy as np
 
@@ -132,12 +118,11 @@ def benchmark_onnx_model(model_path: str, num_runs=1000):
 
     input_data = np.random.rand(*input_shape).astype(np.float32)
 
-    benchmark_func(num_runs, lambda: session.run(None, {input_name: input_data}))
+    benchmark_func(num_runs, lambda: session.run(None, {input_name: input_data}), duration)
 
 
 # benchmark_solve_pnp()
 # benchmark_resize_img()
 # benchmark_resize_pil()
-benchmark_onnx_model("HUST_model.onnx")
-benchmark_onnx_model("Generic_model.onnx", 100)
-
+benchmark_onnx_model("HUST_model.onnx", duration=10)
+benchmark_onnx_model("Generic_model.onnx", duration=10)
