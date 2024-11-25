@@ -3,6 +3,31 @@ import numpy as np
 import time
 
 
+def fancy_benchmark_func(num_runs=1000, function=None):
+    start_time = time.time_ns()
+
+    count = 0
+    for _ in range(num_runs):
+        count += 1
+        function()
+        current_time = time.time_ns()
+        print(
+            f"\r Current average: {1e9 / (current_time - start_time) * count:.2f} FPS",
+            end="",
+        )
+
+    end_time = time.time_ns()
+
+    elapsed_time = (end_time - start_time) / 1e6
+    avg_time_per_run = elapsed_time / num_runs
+
+    print()
+    print(f"Benchmark complete: {num_runs} runs.")
+    print(f"Total time: {elapsed_time:.5f} milliseconds")
+    print(f"Average time per run: {avg_time_per_run:.5f} milliseconds")
+    print()
+
+
 def benchmark_func(num_runs=1000, function=None):
     # Time the function calls
     start_time = time.time_ns()
@@ -64,7 +89,7 @@ def benchmark_resize_img(num_runs=1000):
         cv2.INTER_LINEAR_EXACT,
         cv2.INTER_NEAREST_EXACT,
     ]
-    
+
     NAME_LUT = {
         cv2.INTER_NEAREST: "INTER_NEAREST",
         cv2.INTER_LINEAR: "INTER_LINEAR",
@@ -96,7 +121,23 @@ def benchmark_resize_pil(num_runs=1000):
     benchmark_func(num_runs, lambda: Image.fromarray(img).resize(TARGET_SIZE))
 
 
-RUNS = 2000
-benchmark_solve_pnp()
-benchmark_resize_img()
-benchmark_resize_pil()
+def benchmark_onnx_model(model_path: str, num_runs=1000):
+    import onnxruntime as ort
+    import numpy as np
+
+    session = ort.InferenceSession(model_path)
+    # Get input name and shape
+    input_name = session.get_inputs()[0].name
+    input_shape = session.get_inputs()[0].shape
+
+    input_data = np.random.rand(*input_shape).astype(np.float32)
+
+    benchmark_func(num_runs, lambda: session.run(None, {input_name: input_data}))
+
+
+# benchmark_solve_pnp()
+# benchmark_resize_img()
+# benchmark_resize_pil()
+benchmark_onnx_model("HUST_model.onnx")
+benchmark_onnx_model("Generic_model.onnx", 100)
+
