@@ -55,8 +55,33 @@ def benchmark_resize_img(num_runs=1000):
 
     TARGET_SIZE = (416, 416)
 
-    # Time the resize calls
-    benchmark_func(num_runs, lambda: cv2.resize(img, TARGET_SIZE))
+    POSSIBLE_INTERPOLATIONS = [
+        cv2.INTER_NEAREST,
+        cv2.INTER_LINEAR,
+        cv2.INTER_CUBIC,
+        cv2.INTER_AREA,
+        cv2.INTER_LANCZOS4,
+        cv2.INTER_LINEAR_EXACT,
+        cv2.INTER_NEAREST_EXACT,
+    ]
+    
+    NAME_LUT = {
+        cv2.INTER_NEAREST: "INTER_NEAREST",
+        cv2.INTER_LINEAR: "INTER_LINEAR",
+        cv2.INTER_CUBIC: "INTER_CUBIC",
+        cv2.INTER_AREA: "INTER_AREA",
+        cv2.INTER_LANCZOS4: "INTER_LANCZOS4",
+        cv2.INTER_LINEAR_EXACT: "INTER_LINEAR_EXACT",
+        cv2.INTER_NEAREST_EXACT: "INTER_NEAREST_EXACT",
+    }
+
+    for interpolation in POSSIBLE_INTERPOLATIONS:
+        print(f"Interpolation: {NAME_LUT[interpolation]}")
+        # Time the resize calls
+        benchmark_func(
+            num_runs,
+            lambda: cv2.resize(img, TARGET_SIZE, interpolation=interpolation),
+        )
 
 
 def benchmark_resize_pil(num_runs=1000):

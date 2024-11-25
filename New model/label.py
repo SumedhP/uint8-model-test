@@ -44,15 +44,15 @@ def splitImageRunTwice(img: MatLike) -> List[Match]:
     return boxes1 + boxes2
 
 def processImage(img: MatLike) -> List[Match]:
-    # boxes = splitImageRunTwice(img)
-    boxes = compressImageAndScaleOutput(img)
+    boxes = splitImageRunTwice(img)
+    # boxes = compressImageAndScaleOutput(img)
     merged = mergeListOfMatches(boxes)
     return merged
 
 
 def main():
     INPUT_NAME = "2023_comp_footage/2_17"
-    OUTPUT_FOLDER = INPUT_NAME + "_labelled_once/"
+    OUTPUT_FOLDER = INPUT_NAME + "_labelled/"
     INPUT_FOLDER = INPUT_NAME + "/"
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
