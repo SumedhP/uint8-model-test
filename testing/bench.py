@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import time
+from line_profiler import profile
 
-
+@profile
 def benchmark_func(num_runs=1000, function=None, duration=5):
     # Call once to warm up
     function()
@@ -107,6 +108,7 @@ def benchmark_resize_pil(num_runs=1000):
     benchmark_func(num_runs, lambda: Image.fromarray(img).resize(TARGET_SIZE))
 
 
+@profile
 def benchmark_onnx_model(model_path: str, num_runs=100000, duration=5):
     import onnxruntime as ort
     import numpy as np
@@ -121,8 +123,37 @@ def benchmark_onnx_model(model_path: str, num_runs=100000, duration=5):
     benchmark_func(num_runs, lambda: session.run(None, {input_name: input_data}), duration)
 
 
-# benchmark_solve_pnp()
-# benchmark_resize_img()
-# benchmark_resize_pil()
-benchmark_onnx_model("HUST_model.onnx", duration=10)
-benchmark_onnx_model("Generic_model.onnx", duration=10)
+def benchmark_kf(num_runs=1000):
+    from filterpy.kalman import KalmanFilter
+
+    # Create Kalman filter
+    kf = KalmanFilter(dim_x=2, dim_z=1)
+    
+    # Define the state transition matrix
+    kf.x = np.array([[0.], [0.]])  # Initial state (location and velocity)
+    kf.F = np.array([[1., 1.], [0., 1.]])  # State transition matrix
+    kf.H = np.array([[1., 0.]])  # Measurement function
+    kf.P *= 1000.  # Covariance matrix
+    kf.R = 5  # Measurement noise
+    kf.Q = np.array([[0.], [0.]])  # Process noise
+    kf.B = np.array([[0.], [0.]])
+
+    def func():
+        # Predict the next state
+        kf.predict()
+        kf.update(1)
+        kf.get_prediction()
+
+    benchmark_func(num_runs, func, 5)
+
+@profile
+def main():
+    # benchmark_solve_pnp()
+    # benchmark_resize_img()
+    # benchmark_resize_pil()
+    benchmark_onnx_model("HUST_model.onnx", duration=10)
+    # benchmark_onnx_model("Generic_model.onnx", duration=10)
+    # benchmark_kf()
+
+if __name__ == "__main__":
+    main()
