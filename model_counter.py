@@ -31,11 +31,15 @@ def count_operations(onnx_model_path):
     print()
 
 if __name__ == "__main__":
-    print("Operations in the generic model:")
-    count_operations("Generic_model.onnx")
+    # print("Operations in the generic model:")
+    # count_operations("Generic_model.onnx")
     
     print("Operations in the new model:")
     count_operations("HUST_model.onnx")
     
-    print("Operations in the new model preprocessed:")
-    count_operations("HUST_model_preprocessed.onnx")
+    
+    print("Operations in the new topimized model:")
+    count_operations("opt______hust.onnx")
+    
+    # print("Operations in the new model preprocessed:")
+    # count_operations("HUST_model_preprocessed.onnx")
